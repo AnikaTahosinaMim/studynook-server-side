@@ -55,6 +55,7 @@ async function run() {
 
     const db = client.db("studyNook");
     const bookingCollection = db.collection("nook");
+    const myBookingCollection = db.collection("my-bookings");
     // crud add data
     app.post("/room", async (req, res) => {
       const rooms = await req.body;
@@ -108,6 +109,65 @@ async function run() {
         res.json(updatedRoom);
       } catch (error) {
         res.status(500).json({ message: error.message });
+      }
+    });
+    // books
+    app.post("/my-bookings", async (req, res) => {
+      try {
+        const bookingData = req.body;
+        bookingData.createdAt = new Date();
+
+        const result = await myBookingCollection.insertOne(bookingData);
+
+        res.status(201).json(result);
+      } catch (error) {
+        res.status(500).json({
+          message: "Failed to create booking",
+          error: error.message,
+        });
+      }
+    });
+    // cencel booking
+    app.delete("/my-bookings/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const result = await myBookingCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+  res.json(result);
+});
+
+    app.get("/my-bookings", async (req, res) => {
+      try {
+        const result = await myBookingCollection
+          .find()
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({
+          message: "Failed to fetch bookings",
+          error: error.message,
+        });
+      }
+    });
+
+    app.delete("/my-bookings/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await myBookingCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({
+          message: "Failed to delete booking",
+          error: error.message,
+        });
       }
     });
 
