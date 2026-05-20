@@ -81,16 +81,35 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
-    // delete 
-    app.delete("/room/:id",async(req,res)=> {
-      const {id} = req.params
-      const result = await bookingCollection.deleteOne({_id: new ObjectId(id)})
-      res.json(result)
-    })
+    // delete
+    app.delete("/room/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await bookingCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.json(result);
+    });
 
     // edit;
-    
+    app.patch("/room/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const updatedData = req.body;
 
+        await bookingCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updatedData },
+        );
+
+        const updatedRoom = await bookingCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        res.json(updatedRoom);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    });
 
     // JWT
     app.get("/booking/:bookingId", longer, async (req, res) => {
