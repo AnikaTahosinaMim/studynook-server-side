@@ -81,6 +81,16 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+    // delete 
+    app.delete("/room/:id",async(req,res)=> {
+      const {id} = req.params
+      const result = await bookingCollection.deleteOne({_id: new ObjectId(id)})
+      res.json(result)
+    })
+
+    // edit;
+    
+
 
     // JWT
     app.get("/booking/:bookingId", longer, async (req, res) => {
