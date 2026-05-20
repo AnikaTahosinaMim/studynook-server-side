@@ -3,9 +3,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const dotenv = require("dotenv");
 const cors = require("cors");
-const { jwtVerify, createRemoteJWKSet } = require("jose-cjs");
 dotenv.config();
 const app = express();
+app.use(express.json());
+const { jwtVerify, createRemoteJWKSet } = require("jose-cjs");
 const port = process.env.PORT || 5000;
 app.use(cors());
 
@@ -54,19 +55,34 @@ async function run() {
 
     const db = client.db("studyNook");
     const bookingCollection = db.collection("nook");
+    // crud add data
+    app.post("/room", async (req, res) => {
+      const rooms = await req.body;
+      console.log(rooms);
+      const result = await bookingCollection.insertOne(rooms);
+      res.json(result);
+    });
+    // add data see in browser
+    app.get("/room", async (req, res) => {
+      const result = await bookingCollection.find().toArray();
+      res.json(result);
+    });
 
+    // room page data
     app.get("/booking", async (req, res) => {
       const cursor = bookingCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
+    // homepage 4 data
     app.get("/featured", async (req, res) => {
       const cursor = bookingCollection.find().limit(4);
       const result = await cursor.toArray();
       res.send(result);
     });
 
+    // JWT
     app.get("/booking/:bookingId", longer, async (req, res) => {
       console.log("USER:", req.user);
       try {
