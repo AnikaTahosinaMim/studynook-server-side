@@ -18,7 +18,6 @@ app.get("/", (req, res) => {
 
 const uri = process.env.MONGO_URL;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -70,15 +69,48 @@ async function run() {
     });
 
     // room page data
-    app.get("/booking", async (req, res) => {
-      const cursor = bookingCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
+   app.get("/booking", async (req, res) => {
+  try {
+    const { search, amenities, startTime, endTime } = req.query;
+
+    let filter = {};
+
+    if (search) {
+      filter.roomName = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+
+    if (amenities) {
+      filter.amenities = { $in: amenities.split(",") };
+    }
+
+    if (startTime && endTime) {
+      filter.$or = [
+        {
+          "booking.startTime": { $gte: startTime },
+          "booking.endTime": { $lte: endTime },
+        },
+      ];
+    }
+
+    console.log("FILTER:", filter);
+
+    const result = await bookingCollection.find(filter).toArray();
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to fetch bookings",
+      error: error.message,
     });
+  }
+});
 
     // homepage 4 data
     app.get("/featured", async (req, res) => {
-      const cursor = bookingCollection.find().limit(4);
+      const cursor = bookingCollection.find().limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -117,6 +149,21 @@ async function run() {
         const bookingData = req.body;
         bookingData.createdAt = new Date();
 
+        const { roomId, bookingDate, startTime, endTime } = bookingData;
+
+        const conflict = await myBookingCollection.findOne({
+          roomId,
+          bookingDate,
+          startTime: { $lte: endTime },
+          endTime: { $gte: startTime },
+        });
+
+        if (conflict) {
+          return res.status(400).json({
+            message: "This time slot is already booked for this room",
+          });
+        }
+
         const result = await myBookingCollection.insertOne(bookingData);
 
         res.status(201).json(result);
@@ -129,14 +176,14 @@ async function run() {
     });
     // cencel booking
     app.delete("/my-bookings/:id", async (req, res) => {
-  const { id } = req.params;
+      const { id } = req.params;
 
-  const result = await myBookingCollection.deleteOne({
-    _id: new ObjectId(id),
-  });
+      const result = await myBookingCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
 
-  res.json(result);
-});
+      res.json(result);
+    });
 
     app.get("/my-bookings", async (req, res) => {
       try {
