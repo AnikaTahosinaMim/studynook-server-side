@@ -123,7 +123,7 @@ async function run() {
       res.json(result);
     });
 
-    // edit;
+    // editpage;
     app.patch("/room/:id", async (req, res) => {
       try {
         const { id } = req.params;
@@ -143,7 +143,7 @@ async function run() {
         res.status(500).json({ message: error.message });
       }
     });
-    // books
+    // books 
     app.post("/my-bookings", async (req, res) => {
       try {
         const bookingData = req.body;
@@ -174,7 +174,7 @@ async function run() {
         });
       }
     });
-    // cencel booking
+    // cencel booking:
     app.delete("/my-bookings/:id", async (req, res) => {
       const { id } = req.params;
 
