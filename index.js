@@ -10,7 +10,9 @@ const { jwtVerify, createRemoteJWKSet } = require("jose-cjs");
 const port = process.env.PORT || 5000;
 app.use(cors());
 
-const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+const JWKS = createRemoteJWKSet(
+  new URL(`${process.env.CLINET_URL}/api/auth/jwks`),
+);
 console.log(JWKS);
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -50,7 +52,7 @@ const longer = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("studyNook");
     const bookingCollection = db.collection("nook");
@@ -62,51 +64,50 @@ async function run() {
       const result = await bookingCollection.insertOne(rooms);
       res.json(result);
     });
-    // add data see in browser
     app.get("/room", async (req, res) => {
       const result = await bookingCollection.find().toArray();
       res.json(result);
     });
 
     // room page data
-   app.get("/booking", async (req, res) => {
-  try {
-    const { search, amenities, startTime, endTime } = req.query;
+    app.get("/booking", async (req, res) => {
+      try {
+        const { search, amenities, startTime, endTime } = req.query;
 
-    let filter = {};
+        let filter = {};
 
-    if (search) {
-      filter.roomName = {
-        $regex: search,
-        $options: "i",
-      };
-    }
+        if (search) {
+          filter.roomName = {
+            $regex: search,
+            $options: "i",
+          };
+        }
 
-    if (amenities) {
-      filter.amenities = { $in: amenities.split(",") };
-    }
+        if (amenities) {
+          filter.amenities = { $in: amenities.split(",") };
+        }
 
-    if (startTime && endTime) {
-      filter.$or = [
-        {
-          "booking.startTime": { $gte: startTime },
-          "booking.endTime": { $lte: endTime },
-        },
-      ];
-    }
+        if (startTime && endTime) {
+          filter.$or = [
+            {
+              "booking.startTime": { $gte: startTime },
+              "booking.endTime": { $lte: endTime },
+            },
+          ];
+        }
 
-    console.log("FILTER:", filter);
+        console.log("FILTER:", filter);
 
-    const result = await bookingCollection.find(filter).toArray();
+        const result = await bookingCollection.find(filter).toArray();
 
-    res.send(result);
-  } catch (error) {
-    res.status(500).send({
-      message: "Failed to fetch bookings",
-      error: error.message,
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({
+          message: "Failed to fetch bookings",
+          error: error.message,
+        });
+      }
     });
-  }
-});
 
     // homepage 4 data
     app.get("/featured", async (req, res) => {
@@ -143,7 +144,7 @@ async function run() {
         res.status(500).json({ message: error.message });
       }
     });
-    // books 
+    // books
     app.post("/my-bookings", async (req, res) => {
       try {
         const bookingData = req.body;
@@ -175,14 +176,26 @@ async function run() {
       }
     });
     // cencel booking:
-    app.delete("/my-bookings/:id", async (req, res) => {
-      const { id } = req.params;
+    app.patch("/my-bookings/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
 
-      const result = await myBookingCollection.deleteOne({
-        _id: new ObjectId(id),
-      });
+        const result = await myBookingCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              status: "cancelled",
+            },
+          },
+        );
 
-      res.json(result);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({
+          message: "Failed to cancel booking",
+          error: error.message,
+        });
+      }
     });
 
     app.get("/my-bookings", async (req, res) => {
